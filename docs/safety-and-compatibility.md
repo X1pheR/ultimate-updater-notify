@@ -8,22 +8,23 @@ The companion deliberately separates **checking** from **installing**.
 
 Automatic checks:
 
-- invoke `/etc/ultimate-updater/check-updates.sh` only with `UU_JOB_SOURCE=initial-inventory`, `UU_DEFER_NOTIFICATION=true`, and bounded runtime;
+- invoke `/etc/ultimate-updater/check-updates.sh` only with `UU_JOB_SOURCE=initial-inventory`, `UU_DEFER_NOTIFICATION=true`, and bounded runtime for Proxmox hosts/guests;
+- after that succeeds, reuse Ultimate Updater's `target-inventory.sh`, `external-selection.sh`, and bounded `external-apt.sh check <target>` path for selected External SSH targets;
 - let Ultimate Updater own target selection, package-manager checks, security/normal classification, total counts, and reboot detection;
 - consume Ultimate Updater's structured `status.json` and `STATUS_MODEL_RENDER_NOTIFICATION` output;
 - never invoke the normal upstream `update -check` path;
 - never install package updates;
 - never start, stop, resume, suspend, or reboot Proxmox guests.
 
-Actual package installation remains operator-triggered through Ultimate Updater. The `initial-inventory` mode is the accepted upstream read-only lifecycle boundary: stopped or paused selected guests are left unchanged and represented as `Not checked`. The companion treats Ultimate Updater's native `STATE=issues` result as a failed scheduled check rather than silently advancing the success heartbeat.
+Actual package installation remains operator-triggered through Ultimate Updater. The `initial-inventory` mode is the accepted upstream read-only lifecycle boundary for Proxmox guests: stopped or paused selected guests are left unchanged and represented as `Not checked`. External checks use Ultimate Updater's native read-only SSH path and existing package metadata; they do not run `apt-get update` or install packages. The companion treats collection failures or Ultimate Updater's native `STATE=issues` result as failed scheduled checks rather than silently advancing the success heartbeat.
 
 ## Compatibility baseline
 
 The supported safety-critical baseline is intentionally narrow at the upstream-interface level:
 
 - Proxmox VE host running **Ultimate Updater 5.1** with its current `/etc/ultimate-updater` layout;
-- `initial-inventory` behavior and the structured status-model interface present in that release;
-- target and package-manager support inherited from the accepted Ultimate Updater 5.1.3 check/status model rather than duplicated by the companion.
+- `initial-inventory` behavior, the structured status-model interface, and the native External inventory/selection/read-only-check interfaces present in that release;
+- target and package-manager support inherited from the accepted Ultimate Updater 5.1.3 check/status/External model rather than duplicated by the companion.
 
 Stopped or paused selected guests are not started or resumed. Ultimate Updater represents them as `Not checked`, which the companion surfaces as a failed check. Unreachable, unsupported, errored, or otherwise not-checked selected targets likewise remain visible through Ultimate Updater's native `STATE=issues` rendering.
 
@@ -34,14 +35,14 @@ Before every automatic update check, the notifier validates the upstream integra
 The health check verifies that:
 
 - Ultimate Updater reports exactly version `5.1`;
-- `update.sh`, `check-updates.sh`, `status-model.sh`, `target-runtime.sh`, and `tag-filter.sh` expose the accepted interfaces required by the delegated check path;
+- `update.sh`, `check-updates.sh`, `status-model.sh`, `target-runtime.sh`, `target-inventory.sh`, `external-selection.sh`, `external-apt.sh`, and `tag-filter.sh` expose the accepted interfaces required by the delegated check paths;
 - `STATUS_MODEL_RENDER_NOTIFICATION` remains callable;
 - generated status.json declares exactly schema_version 1 with a list-valued targets field before any status rendering is accepted;
 - Ultimate Updater's configured `LOG_FILE` still matches the manual observer path;
 - no separate upstream automatic `update -check` or `check-updates.sh` cron entry exists in root's user crontab, `/etc/crontab`, or `/etc/cron.d`;
 - the companion check timer and manual path watcher remain enabled and active.
 
-The first successful v0.4 compatibility check records a safety fingerprint across the five safety-critical upstream interface files. Any later source drift fails closed and blocks automatic checks until a new notifier release explicitly accepts the changed upstream boundary. A failed compatibility probe sends a deduplicated ntfy warning; restoration of the accepted boundary sends one recovery notification.
+The first successful compatibility check records a safety fingerprint across the eight safety-critical upstream interface files used by host/guest and External collection. Any later source drift fails closed and blocks automatic checks until a new notifier release explicitly accepts the changed upstream boundary. A failed compatibility probe sends a deduplicated ntfy warning; restoration of the accepted boundary sends one recovery notification.
 
 ## Cron ownership and restoration
 
@@ -59,7 +60,7 @@ This makes the companion systemd timer the only intended automatic update-check 
 
 ## Runtime bounds
 
-The delegated Ultimate Updater `initial-inventory` run is bounded to 540 seconds by the companion and the complete systemd automatic-check service remains capped at 10 minutes.
+The delegated Ultimate Updater `initial-inventory` run is bounded to 540 seconds by the companion. Each selected External target check is additionally bounded to 90 seconds, and the complete systemd automatic-check service remains capped at 10 minutes.
 
 Outbound ntfy and Gatus HTTP calls use:
 
@@ -70,6 +71,6 @@ These limits are safety bounds, not expected normal runtimes.
 
 ## Upstream relationship
 
-The companion does not patch or redistribute Ultimate Updater source. It consumes Ultimate Updater 5.1.3's accepted read-only inventory/status interfaces plus the version/log/tag configuration needed for compatibility and operator-run observation.
+The companion does not patch or redistribute Ultimate Updater source. It consumes Ultimate Updater 5.1.3's accepted read-only initial-inventory, External inventory/selection/check, and status interfaces plus the version/log/tag configuration needed for compatibility and operator-run observation.
 
 Ultimate Updater remains responsible for the behavior and authorization of manual update installation.

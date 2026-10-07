@@ -13,6 +13,9 @@ UPDATER_ENTRYPOINT="${UUN_UPDATER_ENTRYPOINT:-${UPDATER_DIR}/update.sh}"
 UPDATER_CHECK_SCRIPT="${UUN_UPDATER_CHECK_SCRIPT:-${UPDATER_DIR}/check-updates.sh}"
 UPDATER_STATUS_MODEL="${UUN_UPDATER_STATUS_MODEL:-${UPDATER_DIR}/status-model.sh}"
 UPDATER_TARGET_RUNTIME="${UUN_UPDATER_TARGET_RUNTIME:-${UPDATER_DIR}/target-runtime.sh}"
+UPDATER_TARGET_INVENTORY="${UUN_UPDATER_TARGET_INVENTORY:-${UPDATER_DIR}/target-inventory.sh}"
+UPDATER_EXTERNAL_SELECTION="${UUN_UPDATER_EXTERNAL_SELECTION:-${UPDATER_DIR}/external-selection.sh}"
+UPDATER_EXTERNAL_APT="${UUN_UPDATER_EXTERNAL_APT:-${UPDATER_DIR}/external-apt.sh}"
 UPDATER_STATUS_FILE="${UUN_UPDATER_STATUS_FILE:-${UPDATER_DIR}/status.json}"
 SYSTEMCTL="${UUN_SYSTEMCTL:-systemctl}"
 CRONTAB="${UUN_CRONTAB:-crontab}"
@@ -20,6 +23,7 @@ SYSTEM_CRONTAB="${UUN_SYSTEM_CRONTAB:-/etc/crontab}"
 CRON_D_DIR="${UUN_CRON_D_DIR:-/etc/cron.d}"
 TIMEOUT_BIN="${UUN_TIMEOUT:-timeout}"
 UPSTREAM_CHECK_TIMEOUT_SECONDS="${UUN_UPSTREAM_CHECK_TIMEOUT_SECONDS:-540}"
+UPSTREAM_EXTERNAL_CHECK_TIMEOUT_SECONDS="${UUN_UPSTREAM_EXTERNAL_CHECK_TIMEOUT_SECONDS:-90}"
 MANUAL_DEDUPE_SECONDS="${UUN_MANUAL_DEDUPE_SECONDS:-90}"
 NTFY_MESSAGE_MAX_BYTES="${UUN_NTFY_MESSAGE_MAX_BYTES:-3500}"
 
@@ -56,6 +60,10 @@ load_config() {
 
 run_upstream_check_bounded() {
   "$TIMEOUT_BIN" --signal=TERM --kill-after=10s "${UPSTREAM_CHECK_TIMEOUT_SECONDS}s" "$@"
+}
+
+run_upstream_external_check_bounded() {
+  "$TIMEOUT_BIN" --signal=TERM --kill-after=10s "${UPSTREAM_EXTERNAL_CHECK_TIMEOUT_SECONDS}s" "$@"
 }
 
 ensure_state_dir() {
@@ -220,6 +228,9 @@ upstream_fingerprint() {
     sha256sum "$UPDATER_CHECK_SCRIPT" | awk '{print $1}'
     sha256sum "$UPDATER_STATUS_MODEL" | awk '{print $1}'
     sha256sum "$UPDATER_TARGET_RUNTIME" | awk '{print $1}'
+    sha256sum "$UPDATER_TARGET_INVENTORY" | awk '{print $1}'
+    sha256sum "$UPDATER_EXTERNAL_SELECTION" | awk '{print $1}'
+    sha256sum "$UPDATER_EXTERNAL_APT" | awk '{print $1}'
     sha256sum "${UPDATER_DIR}/tag-filter.sh" | awk '{print $1}'
   } | hash_text
 }
@@ -228,6 +239,9 @@ validate_upstream_check_interface() {
   [[ -r "$UPDATER_CHECK_SCRIPT" ]] || die "Ultimate Updater check-updates.sh is not readable"
   [[ -r "$UPDATER_STATUS_MODEL" ]] || die "Ultimate Updater status-model.sh is not readable"
   [[ -r "$UPDATER_TARGET_RUNTIME" ]] || die "Ultimate Updater target-runtime.sh is not readable"
+  [[ -r "$UPDATER_TARGET_INVENTORY" ]] || die "Ultimate Updater target-inventory.sh is not readable"
+  [[ -r "$UPDATER_EXTERNAL_SELECTION" ]] || die "Ultimate Updater external-selection.sh is not readable"
+  [[ -r "$UPDATER_EXTERNAL_APT" ]] || die "Ultimate Updater external-apt.sh is not readable"
 
   grep -Fq 'UU_JOB_SOURCE' "$UPDATER_CHECK_SCRIPT" || die "Ultimate Updater check interface no longer exposes initial-inventory mode"
   grep -Fq 'initial-inventory' "$UPDATER_CHECK_SCRIPT" || die "Ultimate Updater check interface no longer exposes initial-inventory mode"
@@ -236,6 +250,10 @@ validate_upstream_check_interface() {
   grep -Fq 'normal_updates' "$UPDATER_STATUS_MODEL" || die "Ultimate Updater status model no longer exposes normal update counts"
   grep -Fq 'security_updates' "$UPDATER_STATUS_MODEL" || die "Ultimate Updater status model no longer exposes security update counts"
   grep -Fq 'reboot_required' "$UPDATER_STATUS_MODEL" || die "Ultimate Updater status model no longer exposes reboot state"
+  grep -Fq 'TARGET_INVENTORY_VALIDATE' "$UPDATER_TARGET_INVENTORY" || die "Ultimate Updater target inventory validator interface changed"
+  grep -Fq 'external_selection_allows' "$UPDATER_EXTERNAL_SELECTION" || die "Ultimate Updater External selection interface changed"
+  grep -Fq 'remote_check' "$UPDATER_EXTERNAL_APT" || die "Ultimate Updater External read-only check interface changed"
+  grep -Fq 'check_target' "$UPDATER_EXTERNAL_APT" || die "Ultimate Updater External target check interface changed"
   if ! (
     set +u
     # These names are consumed by the dynamically sourced Ultimate Updater
@@ -443,6 +461,46 @@ render_upstream_status() (
   STATUS_MODEL_RENDER_NOTIFICATION "$UPDATER_STATUS_FILE" check
 )
 
+collect_upstream_external_updates() (
+  set +u
+  local target target_rc result=0
+  local inventory_file="${UPDATER_DIR}/targets.conf"
+
+  [[ -e "$inventory_file" ]] || return 0
+  # These upstream helpers own inventory parsing, central selection and the
+  # read-only SSH/package-status path. The companion only sequences them after
+  # initial-inventory so stopped/paused Proxmox guests keep the read-only rule.
+  # shellcheck disable=SC1090
+  . "$UPDATER_TARGET_INVENTORY"
+  # shellcheck disable=SC1090
+  . "$UPDATER_EXTERNAL_SELECTION"
+  TARGET_INVENTORY_FILE="$inventory_file"
+  UU_LOCAL_FILES="$UPDATER_DIR"
+  EXTERNAL_SELECTION_CONFIG_FILE="$UPDATER_CONFIG"
+  export TARGET_INVENTORY_FILE UU_LOCAL_FILES EXTERNAL_SELECTION_CONFIG_FILE
+  TARGET_INVENTORY_VALIDATE "$inventory_file" || {
+    printf 'Ultimate Updater External target inventory is invalid: %s\n' "${TARGET_INVENTORY_ERROR:-unknown error}" >&2
+    return 1
+  }
+
+  for target in "${TARGET_NAMES[@]}"; do
+    [[ "${TARGET_TRANSPORT[$target]:-}" == ssh ]] || continue
+    external_selection_allows check "$target" || continue
+    set +e
+    STATUS_MODEL_FILE="$UPDATER_STATUS_FILE" \
+      TARGET_INVENTORY_FILE="$inventory_file" \
+      UU_LOCAL_FILES="$UPDATER_DIR" \
+      run_upstream_external_check_bounded "$UPDATER_EXTERNAL_APT" check "$target"
+    target_rc=$?
+    set -e
+    if [[ "$target_rc" -ne 0 ]]; then
+      printf 'Ultimate Updater External check failed for %s with exit code %s\n' "$target" "$target_rc" >&2
+      [[ "$result" -ne 0 ]] || result=$target_rc
+    fi
+  done
+  return "$result"
+)
+
 collect_upstream_updates() {
   local output_file
   local error_file
@@ -475,6 +533,25 @@ collect_upstream_updates() {
     rm -f "$output_file" "$error_file"
     return "$rc"
   fi
+  if [[ "$rc" -eq 0 ]]; then
+    set +e
+    collect_upstream_external_updates >>"$output_file" 2>>"$error_file"
+    rc=$?
+    set -e
+  fi
+
+  if [[ "$rc" -ne 0 ]]; then
+    if [[ -s "$error_file" ]]; then
+      cat "$error_file" >&2
+    elif [[ -s "$output_file" ]]; then
+      cat "$output_file" >&2
+    else
+      printf 'Ultimate Updater External collection failed with exit code %s\n' "$rc" >&2
+    fi
+    rm -f "$output_file" "$error_file"
+    return "$rc"
+  fi
+
   rm -f "$output_file" "$error_file"
   [[ -s "$UPDATER_STATUS_FILE" ]] || die "Ultimate Updater did not produce status output: $UPDATER_STATUS_FILE"
   validate_upstream_status_schema || return 1
