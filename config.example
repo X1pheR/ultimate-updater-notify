@@ -4,7 +4,7 @@ NTFY_URL="https://ntfy.example.com/ultimate-updater"
 
 # Root-readable file containing only the ntfy access token. The notifier sends
 # it using native ntfy Bearer authentication and never places it in curl argv.
-NTFY_TOKEN_FILE="/etc/proxmox-ultimate-updater-notify/ntfy-token"
+NTFY_TOKEN_FILE="/etc/ultimate-updater-notify/ntfy-token"
 
 NTFY_TITLE_PREFIX="Ultimate Updater"
 

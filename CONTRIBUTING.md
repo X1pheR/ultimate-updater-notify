@@ -1,6 +1,6 @@
 # Contributing
 
-This repository maintains a notification and safety companion around BassT23/Proxmox Ultimate Updater. Keep changes focused on that companion boundary rather than copying or modifying upstream source.
+This repository maintains a notification and safety companion around Ultimate Updater. Keep changes focused on that companion boundary rather than copying or modifying upstream source.
 
 ## Before proposing a change
 

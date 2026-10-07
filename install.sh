@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-APP="proxmox-ultimate-updater-notify"
-PREFIX="${PUUN_ROOT_PREFIX:-}"
+APP="ultimate-updater-notify"
+LEGACY_APP="proxmox-ultimate-updater-notify"
+PREFIX="${UUN_ROOT_PREFIX:-}"
 LIBEXEC_DIR="${PREFIX}/usr/local/libexec"
 CONFIG_DIR="${PREFIX}/etc/${APP}"
 SYSTEMD_DIR="${PREFIX}/etc/systemd/system"
@@ -11,11 +12,40 @@ CRON_BACKUP="${STATE_DIR}/original-update-check-cron"
 SYSTEM_CRON_BACKUP="${STATE_DIR}/original-update-check-system-crontab"
 CRON_D_BACKUP_DIR="${STATE_DIR}/original-update-check-cron-d"
 CRON_D_INITIALIZED="${STATE_DIR}/cron-d-initialized"
-SYSTEM_CRONTAB="${PUUN_SYSTEM_CRONTAB:-${PREFIX}/etc/crontab}"
-CRON_D_DIR="${PUUN_CRON_D_DIR:-${PREFIX}/etc/cron.d}"
-SYSTEMCTL="${PUUN_SYSTEMCTL:-systemctl}"
-CRONTAB="${PUUN_CRONTAB:-crontab}"
+SYSTEM_CRONTAB="${UUN_SYSTEM_CRONTAB:-${PREFIX}/etc/crontab}"
+CRON_D_DIR="${UUN_CRON_D_DIR:-${PREFIX}/etc/cron.d}"
+SYSTEMCTL="${UUN_SYSTEMCTL:-systemctl}"
+CRONTAB="${UUN_CRONTAB:-crontab}"
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+LEGACY_CONFIG_DIR="${PREFIX}/etc/${LEGACY_APP}"
+LEGACY_STATE_DIR="${PREFIX}/var/lib/${LEGACY_APP}"
+LEGACY_LIBEXEC="${LIBEXEC_DIR}/${LEGACY_APP}"
+
+migrate_legacy_namespace() {
+  local suffix
+
+  if [[ -e "$LEGACY_CONFIG_DIR" && -e "$CONFIG_DIR" ]]; then
+    printf 'Both legacy and canonical configuration directories exist; reconcile them before installing.\n' >&2
+    exit 1
+  fi
+  if [[ -e "$LEGACY_STATE_DIR" && -e "$STATE_DIR" ]]; then
+    printf 'Both legacy and canonical state directories exist; reconcile them before installing.\n' >&2
+    exit 1
+  fi
+
+  if ! is_test_root; then
+    "$SYSTEMCTL" disable --now "$LEGACY_APP-check.timer" "$LEGACY_APP-manual.path" 2>/dev/null || true
+    "$SYSTEMCTL" stop "$LEGACY_APP-check.service" "$LEGACY_APP-manual.service" 2>/dev/null || true
+  fi
+
+  [[ ! -e "$LEGACY_CONFIG_DIR" ]] || mv "$LEGACY_CONFIG_DIR" "$CONFIG_DIR"
+  [[ ! -e "$LEGACY_STATE_DIR" ]] || mv "$LEGACY_STATE_DIR" "$STATE_DIR"
+
+  for suffix in check.service check.timer manual.service manual.path; do
+    rm -f "$SYSTEMD_DIR/$LEGACY_APP-$suffix"
+  done
+  rm -f "$LEGACY_LIBEXEC"
+}
 
 is_test_root() {
   [[ -n "$PREFIX" ]]
@@ -220,6 +250,7 @@ restore_updater_cron() {
 install_product() {
   require_root
   install -d -m 0755 "$LIBEXEC_DIR" "$SYSTEMD_DIR"
+  migrate_legacy_namespace
   install -d -m 0750 "$CONFIG_DIR"
   install -d -m 0700 "$STATE_DIR"
   install -m 0755 "$SCRIPT_DIR/src/$APP" "$LIBEXEC_DIR/$APP"
@@ -258,7 +289,12 @@ uninstall_product() {
     "$SYSTEMD_DIR/$APP-check.timer" \
     "$SYSTEMD_DIR/$APP-manual.service" \
     "$SYSTEMD_DIR/$APP-manual.path" \
-    "$LIBEXEC_DIR/$APP"
+    "$LIBEXEC_DIR/$APP" \
+    "$SYSTEMD_DIR/$LEGACY_APP-check.service" \
+    "$SYSTEMD_DIR/$LEGACY_APP-check.timer" \
+    "$SYSTEMD_DIR/$LEGACY_APP-manual.service" \
+    "$SYSTEMD_DIR/$LEGACY_APP-manual.path" \
+    "$LEGACY_LIBEXEC"
 
   # Preserve operator configuration and ntfy token by design.
   rm -f \

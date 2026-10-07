@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 - 2026-10-07
+
+- Renames the product and installed namespace to `ultimate-updater-notify`, matching the upstream Ultimate Updater product name.
+- Migrates the legacy `/etc`, `/var/lib`, libexec, and systemd names without discarding operator configuration, ntfy credentials, or notifier state.
+- Explicitly accepts Ultimate Updater 5.1.3 after review of its delegated `initial-inventory` and structured status-model interfaces.
+- Keeps the fail-closed safety fingerprint guard and `status.json` schema version 1 boundary.
+- Verifies that Ultimate Updater 5.1.3 External targets flow through the native status rendering used for ntfy notifications.
+- Renames environment overrides from `PUUN_*` to `UUN_*`.
+
+
 This file records user-visible changes to Proxmox Ultimate Updater Notify.
 
 ## Unreleased

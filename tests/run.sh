@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 REPO_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-APP="$REPO_DIR/src/proxmox-ultimate-updater-notify"
+APP="$REPO_DIR/src/ultimate-updater-notify"
 INSTALLER="$REPO_DIR/install.sh"
 PASS=0
 FAIL=0
@@ -50,7 +50,7 @@ apply_only_exclude_tags() { return 0; }
 EOF
   cat >"$FIXTURE/updater/update.sh" <<'EOF'
 #!/usr/bin/env bash
-VERSION="5.1.2"
+VERSION="5.1.3"
 EOF
   cat >"$FIXTURE/updater/status-model.sh" <<'EOF'
 #!/usr/bin/env bash
@@ -205,11 +205,11 @@ EOF
   cat >"$FIXTURE/bin/systemctl" <<'EOF'
 #!/usr/bin/env bash
 case "${1:-}:${2:-}" in
-  is-active:proxmox-ultimate-updater-notify-manual.path)
+  is-active:ultimate-updater-notify-manual.path)
     [[ "${TEST_MANUAL_PATH_INACTIVE:-false}" == "true" ]] && exit 1
     exit 0
     ;;
-  is-enabled:proxmox-ultimate-updater-notify-check.timer|is-enabled:proxmox-ultimate-updater-notify-manual.path|is-active:proxmox-ultimate-updater-notify-check.timer)
+  is-enabled:ultimate-updater-notify-check.timer|is-enabled:ultimate-updater-notify-manual.path|is-active:ultimate-updater-notify-check.timer)
     exit 0
     ;;
   *) exit 1 ;;
@@ -270,20 +270,20 @@ EOF
   chmod +x "$FIXTURE/bin/"*
   export TEST_FIXTURE="$FIXTURE"
   export PATH="$FIXTURE/bin:$PATH"
-  export PUUN_CONFIG_FILE="$FIXTURE/config"
-  export PUUN_STATE_DIR="$FIXTURE/state"
-  export PUUN_UPDATER_DIR="$FIXTURE/updater"
-  export PUUN_UPDATER_CONFIG="$FIXTURE/updater/update.conf"
-  export PUUN_UPDATER_LOG="$FIXTURE/ultimate-updater.log"
-  export PUUN_CRONTAB="$FIXTURE/bin/crontab"
-  export PUUN_SYSTEM_CRONTAB="$FIXTURE/system-crontab"
-  export PUUN_CRON_D_DIR="$FIXTURE/cron.d"
-  export PUUN_SYSTEMCTL="$FIXTURE/bin/systemctl"
+  export UUN_CONFIG_FILE="$FIXTURE/config"
+  export UUN_STATE_DIR="$FIXTURE/state"
+  export UUN_UPDATER_DIR="$FIXTURE/updater"
+  export UUN_UPDATER_CONFIG="$FIXTURE/updater/update.conf"
+  export UUN_UPDATER_LOG="$FIXTURE/ultimate-updater.log"
+  export UUN_CRONTAB="$FIXTURE/bin/crontab"
+  export UUN_SYSTEM_CRONTAB="$FIXTURE/system-crontab"
+  export UUN_CRON_D_DIR="$FIXTURE/cron.d"
+  export UUN_SYSTEMCTL="$FIXTURE/bin/systemctl"
 }
 
 cleanup_fixture() {
   rm -rf "$FIXTURE"
-  unset TEST_FIXTURE TEST_REFRESH_FAIL TEST_UPSTREAM_CHECK_FAIL TEST_CURL_FAIL TEST_HEARTBEAT_FAIL TEST_NTFY_FAIL TEST_NTFY_ENFORCE_MESSAGE_LIMIT TEST_REBOOT_REQUIRED TEST_MANUAL_PATH_INACTIVE PUUN_SCHEDULED_RUN PUUN_CONFIG_FILE PUUN_STATE_DIR PUUN_UPDATER_DIR PUUN_UPDATER_CONFIG PUUN_UPDATER_LOG PUUN_CRONTAB PUUN_SYSTEMCTL PUUN_SYSTEM_CRONTAB PUUN_CRON_D_DIR
+  unset TEST_FIXTURE TEST_REFRESH_FAIL TEST_UPSTREAM_CHECK_FAIL TEST_CURL_FAIL TEST_HEARTBEAT_FAIL TEST_NTFY_FAIL TEST_NTFY_ENFORCE_MESSAGE_LIMIT TEST_REBOOT_REQUIRED TEST_MANUAL_PATH_INACTIVE UUN_SCHEDULED_RUN UUN_CONFIG_FILE UUN_STATE_DIR UUN_UPDATER_DIR UUN_UPDATER_CONFIG UUN_UPDATER_LOG UUN_CRONTAB UUN_SYSTEMCTL UUN_SYSTEM_CRONTAB UUN_CRON_D_DIR
 }
 
 count_curl() {
@@ -317,8 +317,8 @@ PYJSON
 assert "main script parses" bash -n "$APP"
 assert "installer parses" bash -n "$INSTALLER"
 assert "test script parses" bash -n "$0"
-assert "automatic check service has a hard runtime cap" grep -Fqx "TimeoutStartSec=10min" "$REPO_DIR/systemd/proxmox-ultimate-updater-notify-check.service"
-assert "automatic check service marks scheduled runs" grep -Fqx "Environment=PUUN_SCHEDULED_RUN=true" "$REPO_DIR/systemd/proxmox-ultimate-updater-notify-check.service"
+assert "automatic check service has a hard runtime cap" grep -Fqx "TimeoutStartSec=10min" "$REPO_DIR/systemd/ultimate-updater-notify-check.service"
+assert "automatic check service marks scheduled runs" grep -Fqx "Environment=UUN_SCHEDULED_RUN=true" "$REPO_DIR/systemd/ultimate-updater-notify-check.service"
 if grep -nE '(^|[^-])\b(dnf|yum)[[:space:]].*(update|upgrade)|pacman[[:space:]].*-Syu|apk[[:space:]].*upgrade|apt-get[[:space:]]+(upgrade|dist-upgrade|full-upgrade)' "$APP"; then
   fail "automatic checker contains no package-install command"
 else
@@ -345,8 +345,8 @@ cleanup_fixture
 new_fixture
 mkdir -p "$FIXTURE/cron.d"
 printf '00 06 * * * root RUN_FROM_CRON=true /usr/local/sbin/update -check >/dev/null 2>&1\n' >"$FIXTURE/system-crontab"
-export PUUN_SYSTEM_CRONTAB="$FIXTURE/system-crontab"
-export PUUN_CRON_D_DIR="$FIXTURE/cron.d"
+export UUN_SYSTEM_CRONTAB="$FIXTURE/system-crontab"
+export UUN_CRON_D_DIR="$FIXTURE/cron.d"
 set +e
 bash "$APP" health >/dev/null 2>&1
 health_system_cron_rc=$?
@@ -359,8 +359,8 @@ new_fixture
 mkdir -p "$FIXTURE/cron.d"
 : >"$FIXTURE/system-crontab"
 printf '00 06 * * * root /etc/ultimate-updater/check-updates.sh >/dev/null 2>&1\n' >"$FIXTURE/cron.d/ultimate-updater"
-export PUUN_SYSTEM_CRONTAB="$FIXTURE/system-crontab"
-export PUUN_CRON_D_DIR="$FIXTURE/cron.d"
+export UUN_SYSTEM_CRONTAB="$FIXTURE/system-crontab"
+export UUN_CRON_D_DIR="$FIXTURE/cron.d"
 set +e
 bash "$APP" health >/dev/null 2>&1
 health_crond_rc=$?
@@ -371,7 +371,7 @@ cleanup_fixture
 
 # Compatibility health must fail closed if root-crontab inspection is unavailable.
 new_fixture
-export PUUN_CRONTAB="$FIXTURE/bin/missing-crontab"
+export UUN_CRONTAB="$FIXTURE/bin/missing-crontab"
 set +e
 bash "$APP" health >/dev/null 2>&1
 health_crontab_missing_rc=$?
@@ -436,11 +436,11 @@ assert "inactive manual path watcher fails compatibility health" test "$health_p
 assert "inactive manual path watcher is reported through ntfy" grep -Fq "manual.path" "$FIXTURE/curl-args"
 cleanup_fixture
 
-# Compatibility health: the accepted 5.1.2 safety boundary is baselined once and then immutable.
+# Compatibility health: the accepted 5.1.3 safety boundary is baselined once and then immutable.
 new_fixture
 bash "$APP" health
-assert "initial healthy 5.1.2 compatibility baseline is silent" test "$(count_curl)" -eq 0
-assert "initial healthy 5.1.2 compatibility baseline stores safety fingerprint" test -s "$FIXTURE/state/upstream-safety-fingerprint"
+assert "initial healthy 5.1.3 compatibility baseline is silent" test "$(count_curl)" -eq 0
+assert "initial healthy 5.1.3 compatibility baseline stores safety fingerprint" test -s "$FIXTURE/state/upstream-safety-fingerprint"
 accepted_fingerprint=$(cat "$FIXTURE/state/upstream-safety-fingerprint" 2>/dev/null || printf missing)
 printf '\n# simulated upstream source drift\n' >>"$FIXTURE/updater/check-updates.sh"
 set +e
@@ -630,7 +630,7 @@ cat >>"$FIXTURE/config" <<EOF
 GATUS_HEARTBEAT_URL="https://gatus.example.invalid/api/v1/endpoints/proxmox_ultimate-updater/external"
 GATUS_HEARTBEAT_TOKEN_FILE="$FIXTURE/gatus-token"
 EOF
-export PUUN_SCHEDULED_RUN=true
+export UUN_SCHEDULED_RUN=true
 bash "$APP" check
 assert "scheduled successful check publishes Gatus heartbeat" grep -Fq "gatus.example.invalid/api/v1/endpoints/proxmox_ultimate-updater/external?success=true" "$FIXTURE/curl-args"
 assert "Gatus heartbeat token is absent from curl argv" not_grep_fixed "gatus-heartbeat-secret" "$FIXTURE/curl-args"
@@ -645,7 +645,7 @@ cat >>"$FIXTURE/config" <<EOF
 GATUS_HEARTBEAT_URL="https://gatus.example.invalid/api/v1/endpoints/proxmox_ultimate-updater/external"
 GATUS_HEARTBEAT_TOKEN_FILE="$FIXTURE/gatus-token"
 EOF
-export PUUN_SCHEDULED_RUN=true
+export UUN_SCHEDULED_RUN=true
 export TEST_NTFY_FAIL=true
 set +e
 bash "$APP" check >/dev/null 2>&1
@@ -662,7 +662,7 @@ cat >>"$FIXTURE/config" <<EOF
 GATUS_HEARTBEAT_URL="https://gatus.example.invalid/api/v1/endpoints/proxmox_ultimate-updater/external"
 GATUS_HEARTBEAT_TOKEN_FILE="$FIXTURE/gatus-token"
 EOF
-export PUUN_SCHEDULED_RUN=true
+export UUN_SCHEDULED_RUN=true
 export TEST_HEARTBEAT_FAIL=true
 set +e
 bash "$APP" check >/dev/null 2>&1
@@ -732,6 +732,36 @@ bash "$APP" check
 assert "reboot-required target keeps its update split" grep -Fq 'S: 0 / N: 1' "$FIXTURE/curl-args"
 assert "reboot-required section is forwarded from Ultimate Updater" grep -Fq 'Reboot required:' "$FIXTURE/curl-args"
 assert "reboot-required target identity is forwarded" grep -Fq 'docker' "$FIXTURE/curl-args"
+cleanup_fixture
+
+# External targets are forwarded from Ultimate Updater's native 5.1.3 status model.
+new_fixture
+python3 - "$FIXTURE/upstream-status.json" <<'PYJSON'
+import json,sys
+path=sys.argv[1]
+p=json.load(open(path))
+p["targets"].append({
+    "id":"external:oci-vps",
+    "type":"external",
+    "transport":"ssh",
+    "reachable":True,
+    "os":"Ubuntu",
+    "updater":"apt",
+    "updates":{"available":2},
+    "normal_updates":2,
+    "security_updates":0,
+    "reboot_required":False,
+    "check_status":"updates_available",
+    "error":None,
+    "node":"",
+    "name":"oci-vps",
+    "security_split_supported":True
+})
+json.dump(p, open(path,"w"), indent=2)
+PYJSON
+bash "$APP" check
+assert "External target identity is forwarded by native Ultimate Updater rendering" grep -Fq 'oci-vps' "$FIXTURE/curl-args"
+assert "External target update count is included in native total" grep -Fq 'Total available updates: 3' "$FIXTURE/curl-args"
 cleanup_fixture
 
 # Structured status schema drift must fail closed before rendering or heartbeat success.
@@ -836,32 +866,67 @@ esac
 EOF
 chmod +x "$INSTALL_FIXTURE/bin/crontab"
 export TEST_CRON_STORE="$CRON_STORE"
-PUUN_ROOT_PREFIX="$INSTALL_FIXTURE/root" PUUN_CRONTAB="$INSTALL_FIXTURE/bin/crontab" bash "$INSTALLER" install
+UUN_ROOT_PREFIX="$INSTALL_FIXTURE/root" UUN_CRONTAB="$INSTALL_FIXTURE/bin/crontab" bash "$INSTALLER" install
 assert "installer removes upstream update-check cron" not_grep_fixed "update -check" "$CRON_STORE"
 assert "installer removes system crontab upstream checker" not_grep_fixed "update -check" "$SYSTEM_CRON_STORE"
 assert "installer removes cron.d upstream checker" not_grep_fixed "check-updates.sh" "$CRON_D_STORE"
 assert "installer preserves system crontab unrelated line" grep -Fq "run-parts --report /etc/cron.hourly" "$SYSTEM_CRON_STORE"
 assert "installer preserves cron.d unrelated content" grep -Fq "# keep this comment" "$CRON_D_STORE"
-assert "installer does not persist empty backup for unrelated cron.d source" test ! -e "$INSTALL_FIXTURE/root/var/lib/proxmox-ultimate-updater-notify/original-update-check-cron-d/housekeeping"
+assert "installer does not persist empty backup for unrelated cron.d source" test ! -e "$INSTALL_FIXTURE/root/var/lib/ultimate-updater-notify/original-update-check-cron-d/housekeeping"
 assert "installer preserves unrelated cron" grep -Fq "keep-me" "$CRON_STORE"
 assert "installer does not remove scheduled non-check update.sh commands" grep -Fq "/etc/ultimate-updater/update.sh host" "$CRON_STORE"
-CONFIG_PATH="$INSTALL_FIXTURE/root/etc/proxmox-ultimate-updater-notify/config"
+CONFIG_PATH="$INSTALL_FIXTURE/root/etc/ultimate-updater-notify/config"
 printf '\nLOCAL_OPERATOR_VALUE="preserve-me"\n' >>"$CONFIG_PATH"
-PUUN_ROOT_PREFIX="$INSTALL_FIXTURE/root" PUUN_CRONTAB="$INSTALL_FIXTURE/bin/crontab" bash "$INSTALLER" install
+UUN_ROOT_PREFIX="$INSTALL_FIXTURE/root" UUN_CRONTAB="$INSTALL_FIXTURE/bin/crontab" bash "$INSTALLER" install
 assert "reinstall preserves operator config" grep -Fq 'LOCAL_OPERATOR_VALUE="preserve-me"' "$CONFIG_PATH"
-STATE_PATH="$INSTALL_FIXTURE/root/var/lib/proxmox-ultimate-updater-notify"
+STATE_PATH="$INSTALL_FIXTURE/root/var/lib/ultimate-updater-notify"
 printf 'failure\n' >"$STATE_PATH/health-status"
 printf 'hash\n' >"$STATE_PATH/health-hash"
 printf 'fingerprint\n' >"$STATE_PATH/upstream-fingerprint"
 printf 'safety-fingerprint\n' >"$STATE_PATH/upstream-safety-fingerprint"
 printf '5.1\n' >"$STATE_PATH/upstream-version"
-PUUN_ROOT_PREFIX="$INSTALL_FIXTURE/root" PUUN_CRONTAB="$INSTALL_FIXTURE/bin/crontab" bash "$INSTALLER" uninstall
+UUN_ROOT_PREFIX="$INSTALL_FIXTURE/root" UUN_CRONTAB="$INSTALL_FIXTURE/bin/crontab" bash "$INSTALLER" uninstall
 assert "uninstall restores original update-check cron" grep -Fq "/usr/local/sbin/update -check" "$CRON_STORE"
 assert "uninstall restores system crontab upstream checker" grep -Fq "RUN_FROM_CRON=true /usr/local/sbin/update -check" "$SYSTEM_CRON_STORE"
 assert "uninstall restores cron.d upstream checker" grep -Fq "/etc/ultimate-updater/check-updates.sh" "$CRON_D_STORE"
 assert "uninstall removes compatibility health state" test ! -e "$STATE_PATH/health-status" -a ! -e "$STATE_PATH/health-hash" -a ! -e "$STATE_PATH/upstream-fingerprint" -a ! -e "$STATE_PATH/upstream-safety-fingerprint" -a ! -e "$STATE_PATH/upstream-version"
 assert "uninstall preserves operator config and token directory" grep -Fq 'LOCAL_OPERATOR_VALUE="preserve-me"' "$CONFIG_PATH"
 rm -rf "$INSTALL_FIXTURE"
+unset TEST_CRON_STORE
+
+# v0.5 namespace migration preserves operator configuration/state while removing legacy installed names.
+MIGRATION_FIXTURE=$(mktemp -d)
+mkdir -p "$MIGRATION_FIXTURE/bin"   "$MIGRATION_FIXTURE/root/etc/cron.d"   "$MIGRATION_FIXTURE/root/etc/systemd/system"   "$MIGRATION_FIXTURE/root/etc/proxmox-ultimate-updater-notify"   "$MIGRATION_FIXTURE/root/var/lib/proxmox-ultimate-updater-notify"
+: >"$MIGRATION_FIXTURE/root/etc/crontab"
+: >"$MIGRATION_FIXTURE/crontab"
+cat >"$MIGRATION_FIXTURE/bin/crontab" <<'EOF'
+#!/usr/bin/env bash
+store=$TEST_CRON_STORE
+case "${1:-}" in
+  -l) cat "$store" 2>/dev/null || true ;;
+  -r) : >"$store" ;;
+  *) cat "$1" >"$store" ;;
+esac
+EOF
+chmod +x "$MIGRATION_FIXTURE/bin/crontab"
+export TEST_CRON_STORE="$MIGRATION_FIXTURE/crontab"
+printf 'LOCAL_OPERATOR_VALUE="legacy-preserved"
+' >"$MIGRATION_FIXTURE/root/etc/proxmox-ultimate-updater-notify/config"
+printf 'legacy-token
+' >"$MIGRATION_FIXTURE/root/etc/proxmox-ultimate-updater-notify/ntfy-token"
+printf 'updates
+' >"$MIGRATION_FIXTURE/root/var/lib/proxmox-ultimate-updater-notify/check-status"
+for unit in check.service check.timer manual.service manual.path; do
+  : >"$MIGRATION_FIXTURE/root/etc/systemd/system/proxmox-ultimate-updater-notify-$unit"
+done
+UUN_ROOT_PREFIX="$MIGRATION_FIXTURE/root" UUN_CRONTAB="$MIGRATION_FIXTURE/bin/crontab" bash "$INSTALLER" install
+assert "legacy config migrates to canonical namespace" grep -Fq 'legacy-preserved' "$MIGRATION_FIXTURE/root/etc/ultimate-updater-notify/config"
+assert "legacy token migrates to canonical namespace" grep -Fq 'legacy-token' "$MIGRATION_FIXTURE/root/etc/ultimate-updater-notify/ntfy-token"
+assert "legacy state migrates to canonical namespace" grep -Fqx 'updates' "$MIGRATION_FIXTURE/root/var/lib/ultimate-updater-notify/check-status"
+assert "legacy config directory is retired" test ! -e "$MIGRATION_FIXTURE/root/etc/proxmox-ultimate-updater-notify"
+assert "legacy state directory is retired" test ! -e "$MIGRATION_FIXTURE/root/var/lib/proxmox-ultimate-updater-notify"
+assert "legacy systemd unit files are retired" test ! -e "$MIGRATION_FIXTURE/root/etc/systemd/system/proxmox-ultimate-updater-notify-check.timer"
+rm -rf "$MIGRATION_FIXTURE"
 unset TEST_CRON_STORE
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"

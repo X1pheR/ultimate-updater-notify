@@ -1,0 +1,6 @@
+[Unit]
+Description=Notify on completed manual Ultimate Updater runs
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/ultimate-updater-notify observe-manual

@@ -23,7 +23,7 @@ The supported safety-critical baseline is intentionally narrow at the upstream-i
 
 - Proxmox VE host running **Ultimate Updater 5.1** with its current `/etc/ultimate-updater` layout;
 - `initial-inventory` behavior and the structured status-model interface present in that release;
-- target and package-manager support inherited from the accepted Ultimate Updater 5.1.2 check/status model rather than duplicated by the companion.
+- target and package-manager support inherited from the accepted Ultimate Updater 5.1.3 check/status model rather than duplicated by the companion.
 
 Stopped or paused selected guests are not started or resumed. Ultimate Updater represents them as `Not checked`, which the companion surfaces as a failed check. Unreachable, unsupported, errored, or otherwise not-checked selected targets likewise remain visible through Ultimate Updater's native `STATE=issues` rendering.
 
@@ -70,6 +70,6 @@ These limits are safety bounds, not expected normal runtimes.
 
 ## Upstream relationship
 
-The companion does not patch or redistribute Ultimate Updater source. It consumes Ultimate Updater 5.1.2's accepted read-only inventory/status interfaces plus the version/log/tag configuration needed for compatibility and operator-run observation.
+The companion does not patch or redistribute Ultimate Updater source. It consumes Ultimate Updater 5.1.3's accepted read-only inventory/status interfaces plus the version/log/tag configuration needed for compatibility and operator-run observation.
 
 Ultimate Updater remains responsible for the behavior and authorization of manual update installation.

@@ -1,27 +1,27 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-APP_NAME="proxmox-ultimate-updater-notify"
-SUPPORTED_UPDATER_VERSION="5.1.2"
+APP_NAME="ultimate-updater-notify"
+SUPPORTED_UPDATER_VERSION="5.1.3"
 SUPPORTED_STATUS_SCHEMA_VERSION="1"
-CONFIG_FILE="${PUUN_CONFIG_FILE:-/etc/proxmox-ultimate-updater-notify/config}"
-STATE_DIR="${PUUN_STATE_DIR:-/var/lib/proxmox-ultimate-updater-notify}"
-UPDATER_DIR="${PUUN_UPDATER_DIR:-/etc/ultimate-updater}"
-UPDATER_CONFIG="${PUUN_UPDATER_CONFIG:-${UPDATER_DIR}/update.conf}"
-UPDATER_LOG="${PUUN_UPDATER_LOG:-/var/log/ultimate-updater.log}"
-UPDATER_ENTRYPOINT="${PUUN_UPDATER_ENTRYPOINT:-${UPDATER_DIR}/update.sh}"
-UPDATER_CHECK_SCRIPT="${PUUN_UPDATER_CHECK_SCRIPT:-${UPDATER_DIR}/check-updates.sh}"
-UPDATER_STATUS_MODEL="${PUUN_UPDATER_STATUS_MODEL:-${UPDATER_DIR}/status-model.sh}"
-UPDATER_TARGET_RUNTIME="${PUUN_UPDATER_TARGET_RUNTIME:-${UPDATER_DIR}/target-runtime.sh}"
-UPDATER_STATUS_FILE="${PUUN_UPDATER_STATUS_FILE:-${UPDATER_DIR}/status.json}"
-SYSTEMCTL="${PUUN_SYSTEMCTL:-systemctl}"
-CRONTAB="${PUUN_CRONTAB:-crontab}"
-SYSTEM_CRONTAB="${PUUN_SYSTEM_CRONTAB:-/etc/crontab}"
-CRON_D_DIR="${PUUN_CRON_D_DIR:-/etc/cron.d}"
-TIMEOUT_BIN="${PUUN_TIMEOUT:-timeout}"
-UPSTREAM_CHECK_TIMEOUT_SECONDS="${PUUN_UPSTREAM_CHECK_TIMEOUT_SECONDS:-540}"
-MANUAL_DEDUPE_SECONDS="${PUUN_MANUAL_DEDUPE_SECONDS:-90}"
-NTFY_MESSAGE_MAX_BYTES="${PUUN_NTFY_MESSAGE_MAX_BYTES:-3500}"
+CONFIG_FILE="${UUN_CONFIG_FILE:-/etc/ultimate-updater-notify/config}"
+STATE_DIR="${UUN_STATE_DIR:-/var/lib/ultimate-updater-notify}"
+UPDATER_DIR="${UUN_UPDATER_DIR:-/etc/ultimate-updater}"
+UPDATER_CONFIG="${UUN_UPDATER_CONFIG:-${UPDATER_DIR}/update.conf}"
+UPDATER_LOG="${UUN_UPDATER_LOG:-/var/log/ultimate-updater.log}"
+UPDATER_ENTRYPOINT="${UUN_UPDATER_ENTRYPOINT:-${UPDATER_DIR}/update.sh}"
+UPDATER_CHECK_SCRIPT="${UUN_UPDATER_CHECK_SCRIPT:-${UPDATER_DIR}/check-updates.sh}"
+UPDATER_STATUS_MODEL="${UUN_UPDATER_STATUS_MODEL:-${UPDATER_DIR}/status-model.sh}"
+UPDATER_TARGET_RUNTIME="${UUN_UPDATER_TARGET_RUNTIME:-${UPDATER_DIR}/target-runtime.sh}"
+UPDATER_STATUS_FILE="${UUN_UPDATER_STATUS_FILE:-${UPDATER_DIR}/status.json}"
+SYSTEMCTL="${UUN_SYSTEMCTL:-systemctl}"
+CRONTAB="${UUN_CRONTAB:-crontab}"
+SYSTEM_CRONTAB="${UUN_SYSTEM_CRONTAB:-/etc/crontab}"
+CRON_D_DIR="${UUN_CRON_D_DIR:-/etc/cron.d}"
+TIMEOUT_BIN="${UUN_TIMEOUT:-timeout}"
+UPSTREAM_CHECK_TIMEOUT_SECONDS="${UUN_UPSTREAM_CHECK_TIMEOUT_SECONDS:-540}"
+MANUAL_DEDUPE_SECONDS="${UUN_MANUAL_DEDUPE_SECONDS:-90}"
+NTFY_MESSAGE_MAX_BYTES="${UUN_NTFY_MESSAGE_MAX_BYTES:-3500}"
 
 log() {
   printf '%s: %s\n' "$APP_NAME" "$*" >&2
@@ -87,8 +87,8 @@ limit_ntfy_message() {
   local candidate
   local bytes
 
-  [[ "$max_bytes" =~ ^[0-9]+$ ]] || die "PUUN_NTFY_MESSAGE_MAX_BYTES must be an integer"
-  ((max_bytes >= 256 && max_bytes <= 4096)) || die "PUUN_NTFY_MESSAGE_MAX_BYTES must be between 256 and 4096"
+  [[ "$max_bytes" =~ ^[0-9]+$ ]] || die "UUN_NTFY_MESSAGE_MAX_BYTES must be an integer"
+  ((max_bytes >= 256 && max_bytes <= 4096)) || die "UUN_NTFY_MESSAGE_MAX_BYTES must be between 256 and 4096"
 
   bytes=$(printf '%s' "$message" | wc -c)
   if ((bytes <= max_bytes)); then
@@ -151,7 +151,7 @@ send_ntfy() {
 send_gatus_heartbeat() {
   local token
 
-  [[ "${PUUN_SCHEDULED_RUN:-false}" == "true" ]] || return 0
+  [[ "${UUN_SCHEDULED_RUN:-false}" == "true" ]] || return 0
   load_config
   GATUS_HEARTBEAT_URL="${GATUS_HEARTBEAT_URL:-}"
   GATUS_HEARTBEAT_TOKEN_FILE="${GATUS_HEARTBEAT_TOKEN_FILE:-}"
@@ -348,7 +348,7 @@ process_health_success() {
   previous_status=$(state_read "${STATE_DIR}/health-status")
   accepted_fingerprint=$(state_read "${STATE_DIR}/upstream-safety-fingerprint")
 
-  # v0.4+ delegates safety-critical collection to Ultimate Updater 5.1's
+  # v0.5+ delegates safety-critical collection to Ultimate Updater 5.1's
   # initial-inventory/status interface. Establish the accepted source
   # fingerprint once for this release, then fail closed on any later source
   # drift until a new companion release explicitly accepts that boundary.
@@ -727,7 +727,7 @@ ${details}"
 
 usage() {
   cat <<'EOF'
-Usage: proxmox-ultimate-updater-notify <check|health|observe-manual>
+Usage: ultimate-updater-notify <check|health|observe-manual>
 
   check           Run the accepted Ultimate Updater read-only inventory/status check and notify on state changes.
   health          Validate Ultimate Updater compatibility and companion scheduling health.

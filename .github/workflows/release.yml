@@ -58,25 +58,25 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck
-          bash -n install.sh src/proxmox-ultimate-updater-notify tests/run.sh
-          shellcheck install.sh src/proxmox-ultimate-updater-notify tests/run.sh
+          bash -n install.sh src/ultimate-updater-notify tests/run.sh
+          shellcheck install.sh src/ultimate-updater-notify tests/run.sh
           bash tests/run.sh
-          sudo install -D -m 0755 src/proxmox-ultimate-updater-notify /usr/local/libexec/proxmox-ultimate-updater-notify
+          sudo install -D -m 0755 src/ultimate-updater-notify /usr/local/libexec/ultimate-updater-notify
           systemd-analyze verify systemd/*.service systemd/*.timer systemd/*.path
 
       - name: Build source archive and checksum
         shell: bash
         run: |
           set -euo pipefail
-          archive="proxmox-ultimate-updater-notify-${RELEASE_TAG}.tar.gz"
-          git archive --format=tar.gz --prefix="proxmox-ultimate-updater-notify-${RELEASE_TAG}/" -o "$archive" "${EXPECTED_SHA}"
+          archive="ultimate-updater-notify-${RELEASE_TAG}.tar.gz"
+          git archive --format=tar.gz --prefix="ultimate-updater-notify-${RELEASE_TAG}/" -o "$archive" "${EXPECTED_SHA}"
           sha256sum "$archive" > SHA256SUMS
 
       - name: Attest source archive
         id: attest
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
-          subject-path: "proxmox-ultimate-updater-notify-${{ env.RELEASE_TAG }}.tar.gz"
+          subject-path: "ultimate-updater-notify-${{ env.RELEASE_TAG }}.tar.gz"
 
       - name: Prepare provenance bundle
         env:
@@ -85,7 +85,7 @@ jobs:
         run: |
           set -euo pipefail
           test -s "${ATTESTATION_BUNDLE}"
-          cp "${ATTESTATION_BUNDLE}" "proxmox-ultimate-updater-notify-${RELEASE_TAG}.sigstore.json"
+          cp "${ATTESTATION_BUNDLE}" "ultimate-updater-notify-${RELEASE_TAG}.sigstore.json"
 
       - name: Create or reuse draft GitHub Release
         env:
@@ -100,13 +100,13 @@ jobs:
             }
             echo "Reusing existing draft release ${RELEASE_TAG}"
           else
-            gh release create "${RELEASE_TAG}" --draft --verify-tag --title "Proxmox Ultimate Updater Notify ${RELEASE_TAG}" --generate-notes
+            gh release create "${RELEASE_TAG}" --draft --verify-tag --title "Ultimate Updater Notify ${RELEASE_TAG}" --generate-notes
           fi
 
       - name: Attach release assets
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${RELEASE_TAG}" "proxmox-ultimate-updater-notify-${RELEASE_TAG}.tar.gz" SHA256SUMS "proxmox-ultimate-updater-notify-${RELEASE_TAG}.sigstore.json" --clobber
+        run: gh release upload "${RELEASE_TAG}" "ultimate-updater-notify-${RELEASE_TAG}.tar.gz" SHA256SUMS "ultimate-updater-notify-${RELEASE_TAG}.sigstore.json" --clobber
 
       - name: Publish immutable GitHub Release
         env:
