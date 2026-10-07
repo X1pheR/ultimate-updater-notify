@@ -22,15 +22,15 @@ jobs:
           sudo apt-get install -y shellcheck
 
       - name: Bash syntax
-        run: bash -n install.sh src/proxmox-ultimate-updater-notify tests/run.sh
+        run: bash -n install.sh src/ultimate-updater-notify tests/run.sh
 
       - name: ShellCheck
-        run: shellcheck install.sh src/proxmox-ultimate-updater-notify tests/run.sh
+        run: shellcheck install.sh src/ultimate-updater-notify tests/run.sh
 
       - name: Behavior tests
         run: bash tests/run.sh
 
       - name: Verify systemd units
         run: |
-          sudo install -D -m 0755 src/proxmox-ultimate-updater-notify /usr/local/libexec/proxmox-ultimate-updater-notify
+          sudo install -D -m 0755 src/ultimate-updater-notify /usr/local/libexec/ultimate-updater-notify
           systemd-analyze verify systemd/*.service systemd/*.timer systemd/*.path

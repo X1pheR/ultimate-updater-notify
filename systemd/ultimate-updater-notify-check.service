@@ -1,0 +1,10 @@
+[Unit]
+Description=Check Ultimate Updater targets and notify via ntfy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=UUN_SCHEDULED_RUN=true
+TimeoutStartSec=10min
+ExecStart=/usr/local/libexec/ultimate-updater-notify check

@@ -1,11 +1,11 @@
-# Proxmox Ultimate Updater Notify
+# Ultimate Updater Notify
 
-[![CI](https://github.com/X1pheR/proxmox-ultimate-updater-notify/actions/workflows/ci.yml/badge.svg)](https://github.com/X1pheR/proxmox-ultimate-updater-notify/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/X1pheR/proxmox-ultimate-updater-notify)](https://github.com/X1pheR/proxmox-ultimate-updater-notify/releases/latest)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/X1pheR/proxmox-ultimate-updater-notify/badge)](https://scorecard.dev/viewer/?uri=github.com/X1pheR/proxmox-ultimate-updater-notify)
-[![License: MIT](https://img.shields.io/github/license/X1pheR/proxmox-ultimate-updater-notify)](LICENSE)
+[![CI](https://github.com/X1pheR/ultimate-updater-notify/actions/workflows/ci.yml/badge.svg)](https://github.com/X1pheR/ultimate-updater-notify/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/X1pheR/ultimate-updater-notify)](https://github.com/X1pheR/ultimate-updater-notify/releases/latest)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/X1pheR/ultimate-updater-notify/badge)](https://scorecard.dev/viewer/?uri=github.com/X1pheR/ultimate-updater-notify)
+[![License: MIT](https://img.shields.io/github/license/X1pheR/ultimate-updater-notify)](LICENSE)
 
-`proxmox-ultimate-updater-notify` is a community-maintained notification companion for [BassT23/Proxmox Ultimate Updater](https://github.com/BassT23/Proxmox). It adds safe scheduled update checks, deduplicated ntfy notifications, manual-run completion notifications, upstream compatibility health checks, and an optional Gatus dead-man heartbeat.
+`ultimate-updater-notify` is a community-maintained notification companion for [Ultimate Updater](https://github.com/BassT23/Proxmox). It adds safe scheduled update checks, deduplicated ntfy notifications, manual-run completion notifications, upstream compatibility health checks, and an optional Gatus dead-man heartbeat.
 
 **It never installs package updates automatically and never changes guest power state during automatic checks.** Actual updates remain operator-triggered through Ultimate Updater.
 
@@ -13,7 +13,7 @@ This project is not affiliated with, endorsed by, or maintained by the Ultimate 
 
 ## What it adds
 
-- Scheduled update checks at 07:00 and 19:00 through systemd, delegated to Ultimate Updater 5.1.2's read-only `initial-inventory` status interface.
+- Scheduled update checks at 07:00 and 19:00 through systemd, delegated to Ultimate Updater 5.1.3's read-only `initial-inventory` status interface.
 - ntfy notifications when updates appear, change, clear, fail, or recover.
 - ntfy update messages that forward Ultimate Updater's native status rendering, including security/normal splits, totals, and reboot-required targets.
 - Notifications for completed operator-triggered Ultimate Updater runs.
@@ -32,7 +32,7 @@ This project is not affiliated with, endorsed by, or maintained by the Ultimate 
 
 Automatic checks:
 
-- invoke Ultimate Updater 5.1.2's `check-updates.sh` only with `UU_JOB_SOURCE=initial-inventory` and deferred upstream notifications;
+- invoke Ultimate Updater 5.1.3's `check-updates.sh` only with `UU_JOB_SOURCE=initial-inventory` and deferred upstream notifications;
 - consume Ultimate Updater's structured `status.json` and native `STATUS_MODEL_RENDER_NOTIFICATION` output instead of reimplementing package counts or reboot detection;
 - never invoke the normal upstream `update -check` path;
 - never install package updates;
@@ -43,40 +43,40 @@ See [Safety and compatibility](docs/safety-and-compatibility.md) for the complet
 
 ## Requirements
 
-- Proxmox VE with Ultimate Updater **5.1.2** installed under `/etc/ultimate-updater`;
+- Proxmox VE with Ultimate Updater **5.1.3** installed under `/etc/ultimate-updater`;
 - Bash, `curl`, GNU `timeout`, `sha256sum`, and `python3`;
 - an ntfy topic and access token;
 - any guest-access prerequisites already required by Ultimate Updater for the targets it checks.
 
-The current safety-critical compatibility baseline is exact Ultimate Updater 5.1.2. See [Safety and compatibility](docs/safety-and-compatibility.md) for details.
+The current safety-critical compatibility baseline is exact Ultimate Updater 5.1.3. See [Safety and compatibility](docs/safety-and-compatibility.md) for details.
 
 ## Quick start
 
 ```bash
-git clone https://github.com/X1pheR/proxmox-ultimate-updater-notify.git
-cd proxmox-ultimate-updater-notify
+git clone https://github.com/X1pheR/ultimate-updater-notify.git
+cd ultimate-updater-notify
 sudo bash install.sh
 ```
 
 Configure ntfy in:
 
 ```text
-/etc/proxmox-ultimate-updater-notify/config
+/etc/ultimate-updater-notify/config
 ```
 
 Create the root-only token file:
 
 ```bash
-sudo install -d -m 0750 /etc/proxmox-ultimate-updater-notify
-sudo install -m 0600 /dev/null /etc/proxmox-ultimate-updater-notify/ntfy-token
-sudoedit /etc/proxmox-ultimate-updater-notify/ntfy-token
+sudo install -d -m 0750 /etc/ultimate-updater-notify
+sudo install -m 0600 /dev/null /etc/ultimate-updater-notify/ntfy-token
+sudoedit /etc/ultimate-updater-notify/ntfy-token
 ```
 
 Then verify the integration and run one non-installing check:
 
 ```bash
-sudo /usr/local/libexec/proxmox-ultimate-updater-notify health
-sudo /usr/local/libexec/proxmox-ultimate-updater-notify check
+sudo /usr/local/libexec/ultimate-updater-notify health
+sudo /usr/local/libexec/ultimate-updater-notify check
 ```
 
 Continue to run Ultimate Updater manually as usual when you decide to install updates.
@@ -109,7 +109,7 @@ Release automation re-runs syntax, ShellCheck, behavior and systemd validation, 
 
 No production credentials belong in this repository. Keep ntfy and Gatus tokens in root-readable token files, not in Git or command-line arguments.
 
-Security-sensitive issues should be reported through [GitHub Private Vulnerability Reporting](https://github.com/X1pheR/proxmox-ultimate-updater-notify/security/advisories/new). See [SECURITY.md](SECURITY.md) for the supported-version and security boundary. Use normal GitHub Issues only for non-sensitive bugs, questions, and discussions that do not contain credentials, tokens, private hostnames, exploit details, or other sensitive environment information.
+Security-sensitive issues should be reported through [GitHub Private Vulnerability Reporting](https://github.com/X1pheR/ultimate-updater-notify/security/advisories/new). See [SECURITY.md](SECURITY.md) for the supported-version and security boundary. Use normal GitHub Issues only for non-sensitive bugs, questions, and discussions that do not contain credentials, tokens, private hostnames, exploit details, or other sensitive environment information.
 
 ## License and upstream relationship
 

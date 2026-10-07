@@ -4,11 +4,11 @@
 
 The latest published release is the supported public baseline unless its release notes state otherwise. Security fixes are developed on `main` and published through the normal immutable release lifecycle.
 
-The notifier has an explicit compatibility boundary with BassT23/Proxmox Ultimate Updater. A newer upstream version is not automatically considered supported merely because it exists; compatibility must pass the repository health checks and documented acceptance boundary.
+The notifier has an explicit compatibility boundary with Ultimate Updater. A newer upstream version is not automatically considered supported merely because it exists; compatibility must pass the repository health checks and documented acceptance boundary.
 
 ## Reporting a vulnerability
 
-Use [GitHub private vulnerability reporting](https://github.com/X1pheR/proxmox-ultimate-updater-notify/security/advisories/new) for suspected vulnerabilities. Do not include ntfy/Gatus tokens, private hostnames, SSH details, guest data, logs containing environment secrets, or exploit material in public issues.
+Use [GitHub private vulnerability reporting](https://github.com/X1pheR/ultimate-updater-notify/security/advisories/new) for suspected vulnerabilities. Do not include ntfy/Gatus tokens, private hostnames, SSH details, guest data, logs containing environment secrets, or exploit material in public issues.
 
 If private vulnerability reporting is unexpectedly unavailable, open a public issue containing only enough non-sensitive information to request a private follow-up channel.
 
