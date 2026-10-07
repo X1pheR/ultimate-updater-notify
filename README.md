@@ -13,7 +13,7 @@ This project is not affiliated with, endorsed by, or maintained by the Ultimate 
 
 ## What it adds
 
-- Scheduled update checks at 07:00 and 19:00 through systemd, delegated to Ultimate Updater 5.1.3's read-only `initial-inventory` status interface.
+- Scheduled update checks at 07:00 and 19:00 through systemd, delegated to Ultimate Updater 5.1.3's read-only `initial-inventory` interface for Proxmox hosts/guests plus its native read-only External check path for configured SSH targets.
 - ntfy notifications when updates appear, change, clear, fail, or recover.
 - ntfy update messages that forward Ultimate Updater's native status rendering, including security/normal splits, totals, and reboot-required targets.
 - Notifications for completed operator-triggered Ultimate Updater runs.
@@ -32,7 +32,8 @@ This project is not affiliated with, endorsed by, or maintained by the Ultimate 
 
 Automatic checks:
 
-- invoke Ultimate Updater 5.1.3's `check-updates.sh` only with `UU_JOB_SOURCE=initial-inventory` and deferred upstream notifications;
+- invoke Ultimate Updater 5.1.3's `check-updates.sh` only with `UU_JOB_SOURCE=initial-inventory` and deferred upstream notifications for Proxmox hosts/guests;
+- then invoke only Ultimate Updater's own bounded `external-apt.sh check <target>` path for centrally selected External SSH targets, preserving upstream inventory, filtering, SSH and status-model behavior;
 - consume Ultimate Updater's structured `status.json` and native `STATUS_MODEL_RENDER_NOTIFICATION` output instead of reimplementing package counts or reboot detection;
 - never invoke the normal upstream `update -check` path;
 - never install package updates;

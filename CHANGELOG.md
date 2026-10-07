@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.1 - 2026-10-07
+
+- Extends scheduled checks to configured Ultimate Updater External SSH targets without switching Proxmox guests away from the read-only `initial-inventory` lifecycle boundary.
+- Reuses upstream `target-inventory.sh`, `external-selection.sh`, and `external-apt.sh check` rather than adding a second SSH/package collector.
+- Bounds each External target check to 90 seconds and fails the scheduled run closed on External collection errors.
+- Expands compatibility fingerprinting to the External inventory, selection, and read-only check interfaces.
+- Preserves central and target-local External filters and keeps APT metadata refresh/package installation outside scheduled checks.
+
 ## 0.5.0 - 2026-10-07
 
 - Renames the product and installed namespace to `ultimate-updater-notify`, matching the upstream Ultimate Updater product name.

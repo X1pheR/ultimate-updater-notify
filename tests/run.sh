@@ -124,6 +124,65 @@ fi
 cp "$TEST_FIXTURE/upstream-status.json" "$STATUS_MODEL_FILE"
 EOF
   chmod +x "$FIXTURE/updater/check-updates.sh"
+  cat >"$FIXTURE/updater/targets.conf" <<'EOF'
+[oci-vps]
+host=192.0.2.200
+transport=ssh
+user=ronald
+port=22
+identity_file=/tmp/test-external-key
+EOF
+  cat >"$FIXTURE/updater/target-inventory.sh" <<'EOF'
+#!/usr/bin/env bash
+TARGET_INVENTORY_VALIDATE() {
+  TARGET_NAMES=(oci-vps)
+  declare -gA TARGET_TRANSPORT=([oci-vps]=ssh)
+  return 0
+}
+EOF
+  cat >"$FIXTURE/updater/external-selection.sh" <<'EOF'
+#!/usr/bin/env bash
+external_selection_allows() {
+  [[ "${1:-}" == check ]] || return 2
+  [[ "${TEST_EXTERNAL_SELECTED:-true}" == true ]]
+}
+EOF
+  cat >"$FIXTURE/updater/external-apt.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+# Fixture markers for the reviewed upstream read-only External interface: remote_check check_target
+[[ "${1:-}" == check && "${2:-}" == oci-vps ]] || exit 64
+printf 'external=%s target=%s status=%s\n' "$1" "$2" "${STATUS_MODEL_FILE:-}" >>"$TEST_FIXTURE/external-check-log"
+if [[ "${TEST_EXTERNAL_CHECK_FAIL:-false}" == true ]]; then
+  printf 'simulated External check failure\n' >&2
+  exit 47
+fi
+python3 - "${STATUS_MODEL_FILE:?}" <<'PYJSON'
+import json,sys
+path=sys.argv[1]
+p=json.load(open(path, encoding='utf-8'))
+p.setdefault('targets', []).append({
+    'id':'oci-vps',
+    'type':'external',
+    'transport':'ssh',
+    'reachable':True,
+    'os':'Ubuntu 24.04.5 LTS',
+    'updater':'apt',
+    'updates':{'available':0},
+    'normal_updates':0,
+    'security_updates':0,
+    'reboot_required':True,
+    'check_status':'updates_available',
+    'error':None,
+    'node':'',
+    'name':'oci-vps',
+    'security_split_supported':True
+})
+json.dump(p, open(path,'w'), indent=2)
+PYJSON
+EOF
+  chmod +x "$FIXTURE/updater/target-inventory.sh" "$FIXTURE/updater/external-selection.sh" "$FIXTURE/updater/external-apt.sh"
+  : >"$FIXTURE/external-check-log"
   : >"$FIXTURE/crontab"
   mkdir -p "$FIXTURE/cron.d"
   : >"$FIXTURE/system-crontab"
@@ -283,7 +342,7 @@ EOF
 
 cleanup_fixture() {
   rm -rf "$FIXTURE"
-  unset TEST_FIXTURE TEST_REFRESH_FAIL TEST_UPSTREAM_CHECK_FAIL TEST_CURL_FAIL TEST_HEARTBEAT_FAIL TEST_NTFY_FAIL TEST_NTFY_ENFORCE_MESSAGE_LIMIT TEST_REBOOT_REQUIRED TEST_MANUAL_PATH_INACTIVE UUN_SCHEDULED_RUN UUN_CONFIG_FILE UUN_STATE_DIR UUN_UPDATER_DIR UUN_UPDATER_CONFIG UUN_UPDATER_LOG UUN_CRONTAB UUN_SYSTEMCTL UUN_SYSTEM_CRONTAB UUN_CRON_D_DIR
+  unset TEST_FIXTURE TEST_REFRESH_FAIL TEST_UPSTREAM_CHECK_FAIL TEST_EXTERNAL_CHECK_FAIL TEST_EXTERNAL_SELECTED TEST_CURL_FAIL TEST_HEARTBEAT_FAIL TEST_NTFY_FAIL TEST_NTFY_ENFORCE_MESSAGE_LIMIT TEST_REBOOT_REQUIRED TEST_MANUAL_PATH_INACTIVE UUN_SCHEDULED_RUN UUN_CONFIG_FILE UUN_STATE_DIR UUN_UPDATER_DIR UUN_UPDATER_CONFIG UUN_UPDATER_LOG UUN_CRONTAB UUN_SYSTEMCTL UUN_SYSTEM_CRONTAB UUN_CRON_D_DIR
 }
 
 count_curl() {
@@ -487,6 +546,17 @@ bash "$APP" health
 assert "healthy compatibility recovery state is deduplicated" test "$(count_curl)" -eq 2
 cleanup_fixture
 
+# Compatibility health: External read-only helper must remain present.
+new_fixture
+rm -f "$FIXTURE/updater/external-apt.sh"
+set +e
+bash "$APP" health >/dev/null 2>&1
+health_external_helper_rc=$?
+set -e
+assert "missing upstream External helper fails compatibility health" test "$health_external_helper_rc" -ne 0
+assert "missing upstream External helper is reported through ntfy" grep -Fq "external-apt.sh" "$FIXTURE/curl-args"
+cleanup_fixture
+
 # Compatibility health: upstream selection helper must remain callable.
 new_fixture
 cat >"$FIXTURE/updater/tag-filter.sh" <<'EOF'
@@ -677,6 +747,7 @@ cleanup_fixture
 new_fixture
 bash "$APP" check
 assert "Ultimate Updater inventory execution is bounded" grep -Fq "540s env UU_JOB_SOURCE=initial-inventory" "$FIXTURE/timeout-log"
+assert "Ultimate Updater External execution is bounded" grep -Fq "90s $FIXTURE/updater/external-apt.sh check oci-vps" "$FIXTURE/timeout-log"
 cleanup_fixture
 
 # Update-state deduplication is driven by Ultimate Updater's structured status.
@@ -734,34 +805,39 @@ assert "reboot-required section is forwarded from Ultimate Updater" grep -Fq 'Re
 assert "reboot-required target identity is forwarded" grep -Fq 'docker' "$FIXTURE/curl-args"
 cleanup_fixture
 
-# External targets are forwarded from Ultimate Updater's native 5.1.3 status model.
+# Scheduled collection invokes upstream's read-only External phase after initial inventory.
 new_fixture
-python3 - "$FIXTURE/upstream-status.json" <<'PYJSON'
-import json,sys
-path=sys.argv[1]
-p=json.load(open(path))
-p["targets"].append({
-    "id":"external:oci-vps",
-    "type":"external",
-    "transport":"ssh",
-    "reachable":True,
-    "os":"Ubuntu",
-    "updater":"apt",
-    "updates":{"available":2},
-    "normal_updates":2,
-    "security_updates":0,
-    "reboot_required":False,
-    "check_status":"updates_available",
-    "error":None,
-    "node":"",
-    "name":"oci-vps",
-    "security_split_supported":True
-})
-json.dump(p, open(path,"w"), indent=2)
-PYJSON
 bash "$APP" check
-assert "External target identity is forwarded by native Ultimate Updater rendering" grep -Fq 'oci-vps' "$FIXTURE/curl-args"
-assert "External target update count is included in native total" grep -Fq 'Total available updates: 3' "$FIXTURE/curl-args"
+assert "scheduled collection invokes upstream External check" grep -Fq 'external=check target=oci-vps' "$FIXTURE/external-check-log"
+assert "External reboot-required target is rendered in ntfy body" grep -Fq 'oci-vps' "$FIXTURE/curl-args"
+assert "External reboot-required state changes native total without inventing package updates" grep -Fq 'Total available updates: 1' "$FIXTURE/curl-args"
+cleanup_fixture
+
+# Central External selection is respected before upstream External contact.
+new_fixture
+export TEST_EXTERNAL_SELECTED=false
+bash "$APP" check
+assert "filtered External target is not contacted" test ! -s "$FIXTURE/external-check-log"
+assert "filtered External target does not enter notification" not_grep_fixed 'oci-vps' "$FIXTURE/curl-args"
+cleanup_fixture
+
+# External collection failure fails closed and does not publish a success heartbeat.
+new_fixture
+printf 'gatus-heartbeat-secret\n' >"$FIXTURE/gatus-token"
+cat >>"$FIXTURE/config" <<EOF
+GATUS_HEARTBEAT_URL="https://gatus.example.invalid/api/v1/endpoints/proxmox_ultimate-updater/external"
+GATUS_HEARTBEAT_TOKEN_FILE="$FIXTURE/gatus-token"
+EOF
+export UUN_SCHEDULED_RUN=true
+export TEST_EXTERNAL_CHECK_FAIL=true
+set +e
+bash "$APP" check >/dev/null 2>&1
+external_fail_rc=$?
+set -e
+assert "External collection failure keeps scheduled check non-zero" test "$external_fail_rc" -ne 0
+assert "External collection failure persists failure state" grep -Fqx 'failure' "$FIXTURE/state/check-status"
+assert "External collection failure is reported through ntfy" grep -Fq 'simulated External check failure' "$FIXTURE/curl-args"
+assert "External collection failure does not advance Gatus heartbeat" not_grep_fixed 'gatus.example.invalid' "$FIXTURE/curl-args"
 cleanup_fixture
 
 # Structured status schema drift must fail closed before rendering or heartbeat success.
