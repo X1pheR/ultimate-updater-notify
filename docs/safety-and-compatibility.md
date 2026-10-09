@@ -28,6 +28,12 @@ The supported safety-critical baseline is intentionally narrow at the upstream-i
 
 Stopped or paused selected guests are not started or resumed. Ultimate Updater represents them as `Not checked`, which the companion surfaces as a failed check. Unreachable, unsupported, errored, or otherwise not-checked selected targets likewise remain visible through Ultimate Updater's native `STATE=issues` rendering.
 
+## Reviewed maintained source baseline (notifier v0.5.2)
+
+This patch release explicitly accepts Ultimate Updater maintained downstream release `v5.1.3-x1pher.2` at commit `e2ce17043dd49e789e7b872966cbedf0d2c90555`. Its eight safety-critical delegated interfaces were compared against the previous accepted release `v5.1.3-x1pher.1`; changes are confined to `update.sh` (self-update pin), `check-updates.sh` (scheduled notification marker) and `status-model.sh` (optional delivery/Gatus). The native Ultimate Updater source verifier passed 29 Python scripts and 16 non-mutating shell fixtures, and the PVE release has seven-file byte parity with the published archive. The resulting PVE safety fingerprint is `c4d4c46a67429a536d1ef07517972d72e1dc0f3609ed59b10b98d3b3390e5e97`.
+
+`accepted-updater-boundary.json` is the release-owned reviewed identity. The infrastructure deployment owner must verify its tag, source SHA, file list and fingerprint against the observed PVE bytes, archive identity and separately accepted deployment policy **before** replacing the previous accepted fingerprint. A new notifier version alone is not authorization to replace a mismatched state file. Never bypass compatibility health by deleting or editing the accepted fingerprint without this complete source-bound release gate.
+
 ## Upstream compatibility health
 
 Before every automatic update check, the notifier validates the upstream integration boundary. A completed manual Ultimate Updater run validates the same boundary again after its normal completion notification.
