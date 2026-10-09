@@ -7,6 +7,26 @@ INSTALLER="$REPO_DIR/install.sh"
 PASS=0
 FAIL=0
 
+# This release accepts an explicit reviewed upstream interface identity,
+# never a silent reset of the runtime safety fingerprint.
+python3 - "$REPO_DIR/VERSION" "$REPO_DIR/accepted-updater-boundary.json" <<'PYACCEPT'
+import json, pathlib, re, sys
+version=pathlib.Path(sys.argv[1]).read_text(encoding="utf-8").strip()
+assert version=="0.5.2", "reviewed notifier release version"
+boundary=json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
+assert boundary["schema_version"]==1
+assert boundary["notifier_version"]==version
+assert boundary["updater_release_tag"]=="v5.1.3-x1pher.2"
+assert re.fullmatch(r"[0-9a-f]{40}",boundary["updater_source_commit"])
+assert re.fullmatch(r"[0-9a-f]{64}",boundary["safety_fingerprint"])
+assert boundary["reviewed_interfaces"] == [
+    "update.sh","check-updates.sh","status-model.sh","target-runtime.sh",
+    "target-inventory.sh","external-selection.sh","external-apt.sh","tag-filter.sh",
+], "fingerprinted interface list"
+print("reviewed downstream acceptance manifest: PASS")
+PYACCEPT
+
+
 pass() { printf 'PASS: %s\n' "$1"; PASS=$((PASS + 1)); }
 fail() { printf 'FAIL: %s\n' "$1" >&2; FAIL=$((FAIL + 1)); }
 assert() {

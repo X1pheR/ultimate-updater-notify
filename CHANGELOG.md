@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.2 - 2026-10-09
+
+- Explicitly accepts the reviewed Ultimate Updater maintained downstream `v5.1.3-x1pher.2` source (`e2ce17043dd49e789e7b872966cbedf0d2c90555`) and safety-critical interface fingerprint (`c4d4c46a67429a536d1ef07517972d72e1dc0f3609ed59b10b98d3b3390e5e97`).
+- Includes the machine-readable `accepted-updater-boundary.json` contract for deployment to validate before replacing the previously accepted source fingerprint.
+- Preserves the existing fail-closed compatibility checks, non-installing guest/External checks, ntfy deduplication and Gatus dead-man behavior. This is a compatibility-only release; the runtime acceptance state must never be reset without matching source/artifact review.
+
 ## 0.5.1 - 2026-10-07
 
 - Extends scheduled checks to configured Ultimate Updater External SSH targets without switching Proxmox guests away from the read-only `initial-inventory` lifecycle boundary.

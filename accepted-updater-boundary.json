@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "notifier_version": "0.5.2",
+  "updater_release_tag": "v5.1.3-x1pher.2",
+  "updater_source_commit": "e2ce17043dd49e789e7b872966cbedf0d2c90555",
+  "safety_fingerprint": "c4d4c46a67429a536d1ef07517972d72e1dc0f3609ed59b10b98d3b3390e5e97",
+  "reviewed_interfaces": [
+    "update.sh",
+    "check-updates.sh",
+    "status-model.sh",
+    "target-runtime.sh",
+    "target-inventory.sh",
+    "external-selection.sh",
+    "external-apt.sh",
+    "tag-filter.sh"
+  ]
+}
